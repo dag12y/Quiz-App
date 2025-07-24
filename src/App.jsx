@@ -1,22 +1,44 @@
-import { useState } from "react";
-import questions from './data'
+import { useState, useEffect } from "react";
+import questions from "./data";
 import { decode } from "html-entities";
 
 function App() {
-    let [welcome,setWelcome]=useState(true)
+    let [welcome, setWelcome] = useState(true);
+    let [selectedAnswers, setSelectedAnswers] = useState({});
+    let [shuffledQuestions, setShuffledQuestions] = useState([]);
 
     function shuffleArray(array) {
-        const shuffled = [...array]; // Copy the array to avoid mutating the original
+        const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1)); // Random index
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // Swap
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
     }
 
-    let questionsHTML = questions.map((question,index)=>{
-        let choices = shuffleArray([question.correct_answer,...question.incorrect_answers])
+    useEffect(() => {
+        if (!welcome) {
+            const shuffledWithChoices = questions.map((q) => {
+                return {
+                    ...q,
+                    choices: shuffleArray([
+                        q.correct_answer,
+                        ...q.incorrect_answers,
+                    ]),
+                };
+            });
+            setShuffledQuestions(shuffledWithChoices);
+        }
+    }, [welcome]);
 
+    const handleAnswerSelect = (questionIndex, answer) => {
+        setSelectedAnswers((prev) => ({
+            ...prev,
+            [questionIndex]: answer,
+        }));
+    };
+
+    const questionsHTML = shuffledQuestions.map((question, index) => {
         return (
             <div
                 className="question w-full max-w-2xl bg-white p-6 rounded-lg shadow-md mb-6"
@@ -26,11 +48,19 @@ function App() {
                     {index + 1}. {decode(question.question)}
                 </p>
                 <div className="answers grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {choices.map((answer) => {
+                    {question.choices.map((answer) => {
+                        const isSelected = selectedAnswers[index] === answer;
                         return (
                             <button
-                                className="answer border-2 px-4 py-3 rounded-lg transition-all "
+                                className={`answer border-2 px-4 py-3 rounded-lg transition-all ${
+                                    isSelected
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "border-gray-300 hover:bg-blue-50 hover:border-blue-200"
+                                } text-left`}
                                 key={answer}
+                                onClick={() =>
+                                    handleAnswerSelect(index, answer)
+                                }
                             >
                                 {decode(answer)}
                             </button>
@@ -39,11 +69,12 @@ function App() {
                 </div>
             </div>
         );
-})
+    });
+
     return (
         <main className="flex-grow flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 w-full">
             {welcome ? (
-                <div className="flex flex-col items-center justify-center min-h-screen ">
+                <div className="flex flex-col items-center justify-center min-h-screen">
                     <h1 className="text-4xl font-bold mb-4">
                         General Knowledge
                     </h1>
@@ -51,19 +82,26 @@ function App() {
                     <button
                         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition cursor-pointer"
                         onClick={() => {
-                            setWelcome(!welcome);
+                            setWelcome(false);
                         }}
                     >
                         Start
                     </button>
                 </div>
             ) : (
-                <div className="questions min-h-screen bg-gray-50 flex flex-col">
-                    {questionsHTML}
-                </div>
+                <>
+                    <div className="questions min-h-screen bg-gray-50 flex flex-col">
+                        {questionsHTML}
+                    </div>
+                    <div className="mt-10 text-center">
+                        <button className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow hover:shadow-md font-medium">
+                            Submit Answers
+                        </button>
+                    </div>
+                </>
             )}
-            ;
         </main>
-    );}
+    );
+}
 
 export default App;
