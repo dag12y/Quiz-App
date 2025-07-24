@@ -15,6 +15,11 @@ function App() {
         }
         return shuffled;
     }
+    const [showResults, setShowResults] = useState(false);
+    const [score, setScore] = useState(0);
+
+
+
 
     useEffect(() => {
         if (!welcome) {
@@ -32,11 +37,24 @@ function App() {
     }, [welcome]);
 
     const handleAnswerSelect = (questionIndex, answer) => {
+        if (showResults) return; 
         setSelectedAnswers((prev) => ({
             ...prev,
             [questionIndex]: answer,
         }));
     };
+
+    const handleSubmit = () => {
+        let correctCount = 0;
+        shuffledQuestions.forEach((question, index) => {
+            if (selectedAnswers[index] === question.correct_answer) {
+                correctCount++;
+            }
+        });
+        setScore(correctCount);
+        setShowResults(true);
+    };
+
 
     const questionsHTML = shuffledQuestions.map((question, index) => {
         return (
@@ -50,13 +68,23 @@ function App() {
                 <div className="answers grid grid-cols-1 md:grid-cols-2 gap-3">
                     {question.choices.map((answer) => {
                         const isSelected = selectedAnswers[index] === answer;
+                        const isCorrect = answer === question.correct_answer;
+                        const isUserWrong =
+                            showResults && isSelected && !isCorrect;
+
+                        const buttonClass = showResults
+                            ? isCorrect
+                                ? "bg-green-500 text-white border-green-600"
+                                : isUserWrong
+                                ? "bg-red-500 text-white border-red-600"
+                                : "border-gray-300"
+                            : isSelected
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "border-gray-300 hover:bg-blue-50 hover:border-blue-200";
+
                         return (
                             <button
-                                className={`answer border-2 px-4 py-3 rounded-lg transition-all ${
-                                    isSelected
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "border-gray-300 hover:bg-blue-50 hover:border-blue-200"
-                                } text-left`}
+                                className={`answer border-2 px-4 py-3 rounded-lg transition-all text-left ${buttonClass}`}
                                 key={answer}
                                 onClick={() =>
                                     handleAnswerSelect(index, answer)
@@ -94,9 +122,31 @@ function App() {
                         {questionsHTML}
                     </div>
                     <div className="mt-10 text-center">
-                        <button className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow hover:shadow-md font-medium">
-                            Submit Answers
-                        </button>
+                        {!showResults ? (
+                            <button
+                                className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow hover:shadow-md font-medium"
+                                onClick={handleSubmit}
+                            >
+                                Submit Answers
+                            </button>
+                        ) : (
+                            <>
+                                <p className="text-xl font-semibold mb-4">
+                                    You scored {score}/{questions.length}
+                                </p>
+                                <button
+                                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow hover:shadow-md font-medium"
+                                    onClick={() => {
+                                        setWelcome(true);
+                                        setSelectedAnswers({});
+                                        setShowResults(false);
+                                        setScore(0);
+                                    }}
+                                >
+                                    Play Again
+                                </button>
+                            </>
+                        )}
                     </div>
                 </>
             )}
