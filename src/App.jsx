@@ -8,6 +8,8 @@ function App() {
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [showResults, setShowResults] = useState(false);
     const [score, setScore] = useState(0);
+    const [fetchError, setFetchError] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     function shuffleArray(array) {
         const shuffled = [...array];
@@ -18,14 +20,36 @@ function App() {
         return shuffled;
     }
 
-    // Fetch questions once
-    useEffect(() => {
+    // Fetch questions function with error handling
+    const fetchQuestions = () => {
+        setIsLoading(true);
+        setFetchError(null);
         fetch(
             "https://opentdb.com/api.php?amount=5&category=9&difficulty=easy&type=multiple"
         )
-            .then((res) => res.json())
-            .then((data) => setQuestions(data.results))
-            .catch((err) => console.error("Error fetching questions:", err));
+            .then((res) => {
+                if (!res.ok) {
+                    if (res.status === 429) {
+                        throw new Error("Too many requests. Please try again in a moment.");
+                    } else {
+                        throw new Error("Failed to fetch questions. Please try again.");
+                    }
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setQuestions(data.results);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setFetchError(err.message);
+                setIsLoading(false);
+            });
+    };
+
+    // Fetch questions once
+    useEffect(() => {
+        fetchQuestions();
     }, []);
 
     // Shuffle choices once welcome screen is exited and questions are loaded
@@ -69,46 +93,22 @@ function App() {
         setShuffledQuestions([]);
     };
 
-    const questionsHTML = shuffledQuestions.map((question, index) => (
-        <div
-            className="question w-full max-w-2xl bg-white p-6 rounded-lg shadow-md mb-6"
-            key={index}
-        >
-            <p className="text-xl font-semibold mb-4 text-gray-800">
-                {index + 1}. {decode(question.question)}
-            </p>
-            <div className="answers grid grid-cols-1 md:grid-cols-2 gap-3">
-                {question.choices.map((answer) => {
-                    const isSelected = selectedAnswers[index] === answer;
-                    const isCorrect = answer === question.correct_answer;
-                    const isUserWrong = showResults && isSelected && !isCorrect;
-
-                    const buttonClass = showResults
-                        ? isCorrect
-                            ? "bg-green-500 text-white border-green-600"
-                            : isUserWrong
-                            ? "bg-red-500 text-white border-red-600"
-                            : "border-gray-300"
-                        : isSelected
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "border-gray-300 hover:bg-blue-50 hover:border-blue-200";
-
-                    return (
-                        <button
-                            className={`answer border-2 px-4 py-3 rounded-lg transition-all text-left ${buttonClass}`}
-                            key={answer}
-                            onClick={() => handleAnswerSelect(index, answer)}
-                        >
-                            {decode(answer)}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    ));
-
     return (
         <main className="flex-grow flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+            {fetchError && (
+                <div className="bg-red-100 border border-red-300 text-red-700 px-6 py-4 rounded-xl shadow mb-6 max-w-md w-full text-center animate-fade-in">
+                    <p className="mb-2 font-semibold">{fetchError}</p>
+                    <button
+                        className="mt-2 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium"
+                        onClick={fetchQuestions}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            {isLoading && !fetchError && (
+                <div className="text-lg text-gray-700 mb-6 animate-pulse">Loading questions...</div>
+            )}
             {welcome ? (
                 <div className="flex flex-col items-center justify-center min-h-screen w-full">
                     <div className="bg-white/90 rounded-2xl shadow-2xl px-10 py-12 flex flex-col items-center max-w-md mx-auto animate-fade-in">
