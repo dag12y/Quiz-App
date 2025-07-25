@@ -91,6 +91,7 @@ function App() {
         setShowResults(false);
         setScore(0);
         setShuffledQuestions([]);
+        fetchQuestions();
     };
 
     return (
